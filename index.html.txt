@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Criss-Cross Game | Multiplayer + Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+/* ---------- GLOBAL STYLING ---------- */
+body {
+    margin: 0;
+    font-family: Poppins, sans-serif;
+    background: linear-gradient(135deg, #151515, #202040, #2b2b52);
+    height: 100vh;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 90%;
+    max-width: 900px;
+    text-align: center;
+    animation: fadeIn 1.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0px); }
+}
+
+h1 {
+    font-size: 45px;
+    margin-bottom: 5px;
+    letter-spacing: 2px;
+    color: #78d1ff;
+    text-shadow: 0 0 10px #78d1ff;
+}
+
+.sub {
+    font-size: 18px;
+    margin-bottom: 30px;
+    opacity: 0.8;
+}
+
+/* ---------- BOARD ---------- */
+.board {
+    width: 300px;
+    margin: 20px auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.cell {
+    width: 100px;
+    height: 100px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 15px;
+    backdrop-filter: blur(5px);
+    font-size: 45px;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.3s;
+    box-shadow: 0 0 10px #000;
+}
+
+.cell:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+#status {
+    margin-top: 20px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #a3e3ff;
+    text-shadow: 0 0 10px #0ff;
+}
+
+/* ---------- BUTTONS ---------- */
+button {
+    margin-top: 20px;
+    padding: 12px 25px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #00bfff;
+    color: black;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #0099cc;
+}
+
+/* ---------- LEADERBOARD ---------- */
+#leaderboard {
+    margin-top: 30px;
+    background: rgba(255,255,255,0.08);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 0 15px #000;
+}
+
+#leaderboard h2 {
+    margin-top: 0;
+    text-shadow: 0 0 10px #78d1ff;
+}
+
+#scores {
+    font-size: 18px;
+    margin-top: 15px;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>CRISS-CROSS</h1>
+    <div class="sub">Multiplayer • Beautiful Neon Theme • Live Leaderboard</div>
+
+    <!-- GAME BOARD -->
+    <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+
+    <div id="status">Player X's Turn</div>
+
+    <button onclick="restart()">Restart Game</button>
+
+    <!-- LEADERBOARD -->
+    <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <div id="scores">Loading...</div>
+        <button onclick="resetLeaderboard()">Reset Leaderboard</button>
+    </div>
+</div>
+
+<script>
+/* ---------------- GAME LOGIC ---------------- */
+let board = ["","","","","","","","",""];
+let currentPlayer = "X";
+let gameOver = false;
+
+const winPatterns = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+];
+
+const cells = document.querySelectorAll(".cell");
+const statusText = document.getElementById("status");
+
+cells.forEach(cell => {
+    cell.addEventListener("click", () => {
+        const i = cell.dataset.index;
+        if (board[i] !== "" || gameOver) return;
+
+        board[i] = currentPlayer;
+        cell.textContent = currentPlayer;
+
+        checkWin();
+        if (!gameOver) switchPlayer();
+    });
+});
+
+function switchPlayer() {
+    currentPlayer = currentPlayer === "X" ? "O" : "X";
+    statusText.textContent = `Player ${currentPlayer}'s Turn`;
+}
+
+function checkWin() {
+    for (let pattern of winPatterns) {
+        let [a,b,c] = pattern;
+        if (board[a] && board[a] === board[b] && board[b] === board[c]) {
+            gameOver = true;
+            statusText.textContent = `🎉 Player ${board[a]} Wins!`;
+            updateLeaderboard(board[a]);
+            return;
+        }
+    }
+
+    if (!board.includes("")) {
+        gameOver = true;
+        statusText.textContent = "It's a Draw!";
+    }
+}
+
+function restart() {
+    board = ["","","","","","","","",""];
+    currentPlayer = "X";
+    gameOver = false;
+    statusText.textContent = `Player X's Turn`;
+    cells.forEach(c => c.textContent = "");
+}
+
+/* ---------------- LEADERBOARD ---------------- */
+function loadLeaderboard() {
+    const scores = JSON.parse(localStorage.getItem("tttScores")) || {X: 0, O: 0};
+    document.getElementById("scores").innerHTML =
+        `Player X: <b>${scores.X}</b><br>Player O: <b>${scores.O}</b>`;
+}
+
+function updateLeaderboard(winner) {
+    const scores = JSON.parse(localStorage.getItem("tttScores")) || {X: 0, O: 0};
+    scores[winner]++;
+    localStorage.setItem("tttScores", JSON.stringify(scores));
+    loadLeaderboard();
+}
+
+function resetLeaderboard() {
+    localStorage.setItem("tttScores", JSON.stringify({X:0, O:0}));
+    loadLeaderboard();
+}
+
+loadLeaderboard();
+</script>
+
+</body>
+</html>
